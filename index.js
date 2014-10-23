@@ -12,14 +12,6 @@ mozlog.config({
 var log = mozlog('kv')
 log.verbose('config', config)
 
-var oauthPool = new (require('poolee'))(
-  https,
-  [config.oauth.host + ':' + config.oauth.port],
-  {
-    keepAlive: true,
-    ping: '/__heartbeat__'
-  }
-)
 
 /*/
     Database configuration
@@ -50,41 +42,21 @@ var server = hapi.createServer(
   }
 )
 
-server.auth.scheme('oauth', function() {
-  return {
-    authenticate: function(req, next) {
-      var auth = req.headers.authorization
-      if (!auth || auth.indexOf('Bearer') !== 0) {
-        return next(hapi.error.unauthorized('Bearer token not provided'))
-      }
-      var token = auth.split(' ')[1]
-      oauthPool.request(
-        {
-          method: 'POST',
-          path: '/v1/verify',
-          headers: { 'Content-Type': 'application/json' },
-          data: JSON.stringify({ token: token }),
-        },
-        function(err, resp, body) {
-          if (err) {
-            return next(hapi.error.serverTimeout(err.message))
-          }
-          try {
-            var json = JSON.parse(body)
-            if (json.code >= 400) {
-              return next(hapi.error.unauthorized(json.message))
-            }
-            next(null, { credentials: json })
-          }
-          catch (e) {
-            return next(hapi.error.serverTimeout(e.message))
-          }
-        }
-      )
+server.pack.register(
+  {
+    plugin: require('hapi-fxa-oauth'),
+    options: {
+      host: config.oauth.host,
+      keepAlive: true
+    }
+  },
+  function (err) {
+    if (err) {
+      log.critical('plugin', { err: err })
+      process.exit(8)
     }
   }
-})
-server.auth.strategy('oauth', 'oauth')
+)
 
 server.ext(
   'onPreResponse',
@@ -102,7 +74,7 @@ server.route([
     path: '/v1/data/{key}',
     config: {
       auth: {
-        strategy: 'oauth',
+        strategy: 'fxa-oauth',
         scope: ['kv:read']
       }
     },
@@ -123,7 +95,7 @@ server.route([
     path: '/v1/data/{key}',
     config: {
       auth: {
-        strategy: 'oauth',
+        strategy: 'fxa-oauth',
         scope: ['kv:write']
       },
       payload: {
@@ -139,7 +111,7 @@ server.route([
     path: '/v1/data/{key}',
     config: {
       auth: {
-        strategy: 'oauth',
+        strategy: 'fxa-oauth',
         scope: ['kv:write']
       }
     },
