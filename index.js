@@ -1,5 +1,5 @@
 var config = require('./config')
-var https = require('https')
+var boom = require('boom')
 var hapi = require('hapi')
 var level = require('level')
 
@@ -26,28 +26,30 @@ function dbKey(key, credentials) {
 /*/
     HTTP server configuration
 /*/
-var server = hapi.createServer(
-  config.server.host,
-  config.server.port,
-  {
-    cors: true,
-    payload: {
-      maxBytes: 256 * 1024
-    },
-    state: {
-      cookies: {
+var server = new hapi.Server({
+  connections: {
+    routes: {
+      cors: true,
+      payload: {
+        maxBytes: 256 * 1024
+      },
+      state: {
         parse: false
       }
     }
   }
-)
+})
 
-server.pack.register(
+server.connection({
+  host: config.server.host,
+  port: config.server.port
+})
+
+server.register(
   {
-    plugin: require('hapi-fxa-oauth'),
+    register: require('hapi-fxa-oauth'),
     options: {
-      host: config.oauth.host,
-      keepAlive: true
+      host: config.oauth.host
     }
   },
   function (err) {
@@ -60,10 +62,10 @@ server.pack.register(
 
 server.ext(
   'onPreResponse',
-  function (request, next) {
+  function (request, reply) {
     var status = request.response.statusCode || request.response.output.statusCode
     log.info('response', { method: request.method, path: request.path, status: status })
-    next()
+    reply.continue()
   }
 )
 
@@ -83,7 +85,7 @@ server.route([
         dbKey(req.params.key, req.auth.credentials),
         function (err, value) {
           if (err && err.notFound) {
-            return reply(hapi.error.notFound())
+            return reply(boom.notFound())
           }
           reply(err || value)
         }

@@ -9,11 +9,12 @@
   "author": "",
   "license": "MPL 2.0",
   "dependencies": {
-    "convict": "0.5.0",
-    "hapi": "7.0.0",
-    "hapi-fxa-oauth": "1.0.0",
+    "boom": "2.6.1",
+    "convict": "0.6.0",
+    "hapi": "8.0.0",
+    "hapi-fxa-oauth": "2.0.0",
     "level": "0.18.0",
-    "mozlog": "0.2.0"
+    "mozlog": "1.0.1"
   },
   "devDependencies": {
     "tap": "0.4.13"
