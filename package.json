@@ -13,7 +13,7 @@
     "convict": "0.6.0",
     "hapi": "8.0.0",
     "hapi-fxa-oauth": "2.0.0",
-    "level": "0.18.0",
+    "level": "1.4.0",
     "mozlog": "1.0.1"
   },
   "devDependencies": {
